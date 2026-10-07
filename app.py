@@ -5,7 +5,7 @@ import pandas as pd
 # পেজ লেআউট কনফিগারেশন
 st.set_page_config(page_title="NeverBounce Clone - Inferno Edition", layout="wide")
 
-# --- কাস্টম ফায়ার থেম সিএসএস (Separate Block) ---
+# --- কাস্টম ফায়ার থেম সিএসএস ---
 st.markdown("""
 <style>
     /* পুরো ওয়েবপেজের ফায়ার ব্যাকগ্রাউন্ড এবং অ্যানিমেশন */
@@ -68,7 +68,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- রানিং এবং অ্যাস ফায়ারিং অ্যানিমেশন এইচটিএমএল (Separate Block) ---
+# --- রানিং এবং অ্যাস ফায়ারিং অ্যানিমেশন এইচটিএমএল ---
 st.markdown("""
 <div class="fire-runner-track">
     <div class="running-human-container">
@@ -116,28 +116,4 @@ def verify_single_email(email):
 st.title("Inferno Email Verification Engine")
 st.markdown("### High-Performance Bulk & Single Email Validation System")
 
-# ট্যাব তৈরি (Single এবং Bulk এর জন্য)
-tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
-
-# --- TAB 1: Single Email ---
-with tab1:
-    st.header("Check Single Email")
-    email_input = st.text_input("Enter email address for verification:")
-    
-    if st.button("Verify Email"):
-        if email_input:
-            with st.spinner("Executing high-speed verification..."):
-                result = verify_single_email(email_input)
-                
-                if result and "error" not in result:
-                    st.success("Verification Complete")
-                    col1, col2, col3 = st.columns(3)
-                    
-                    col1.metric("Status", result.get("deliverability"))
-                    col2.metric("Quality Score", result.get("quality_score"))
-                    col3.metric("Is Disposable?", str(result.get("is_disposable_email", {}).get("value")))
-                    
-                    with st.expander("See Full JSON Response"):
-                        st.json(result)
-                else:
-                    st.error("Failed to verify. Please check the email
+# ট্যাব
