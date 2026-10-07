@@ -3,18 +3,40 @@ import requests
 import pandas as pd
 
 # পেজ লেআউট কনফিগারেশন
-st.set_page_config(page_title="Inferno Email Verification Engine", layout="wide")
+st.set_page_config(page_title="ভইরা দিলাম, কইরা খা!", layout="wide")
 
-# --- সহজ এবং পরিষ্কার স্টাইল (যাতে কোনো কন্টেন্ট লুকায়ে না যায়) ---
+# --- ফায়ার ব্যাকগ্রাউন্ড এবং আইস কোল্ড ইনপুট বক্সের জন্য CSS ---
 st.markdown("""
 <style>
+    /* পুরো ওয়েবপেজের ফায়ার ব্যাকগ্রাউন্ড (লাল, কমলা ও হলুদ শেড) */
     .stApp {
-        background-color: #0f172a;
-        color: #f8fafc;
+        background: linear-gradient(135deg, #2a0800 0%, #6b1100 40%, #b91c1c 80%, #ea580c 100%);
+        background-size: 400% 400%;
+        animation: fireGlow 10s ease infinite;
+        color: #ffffff;
     }
-    .main .block-container {
+
+    @keyframes fireGlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* সার্চ বক্স / টেক্সট ইনপুট ফিল্ডের আইস কোল্ড থিম */
+    div.stTextInput > div.st-bx > div, div.stTextInput input {
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 8px !important;
+        font-weight: bold;
+    }
+    
+    div.stTextInput input::placeholder {
+        color: #0284c7 !important;
+    }
+
+    .block-container {
         padding-top: 2rem;
-        padding-bottom: 3rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -38,16 +60,16 @@ def verify_single_email(email):
     return None
 
 # অ্যাপ টাইটেল এবং হেডার
-st.title("🔥 Inferno Email Verification Engine")
+st.title("🔥 Inferno & 🧊 Ice Email Verification Engine")
 st.markdown("### High-Performance Bulk & Single Email Validation System")
 
 # ট্যাব তৈরি (Single এবং Bulk এর জন্য)
-tab1, tab2 = st.tabs(["🔍 Single Email Verification", "📂 Bulk CSV Verification"])
+tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
 
 # --- TAB 1: Single Email ---
 with tab1:
     st.header("Check Single Email")
-    email_input = st.text_input("Enter email address for verification:")
+    email_input = st.text_input("Enter email address for verification:", placeholder="name@example.com")
     
     if st.button("Verify Email"):
         if email_input:
@@ -55,10 +77,16 @@ with tab1:
                 result = verify_single_email(email_input)
                 
                 if result and "error" not in result:
-                    st.success("Verification Complete")
-                    col1, col2, col3 = st.columns(3)
+                    deliverability = result.get("deliverability")
                     
-                    col1.metric("Status", result.get("deliverability"))
+                    # শর্ত অনুযায়ী কাস্টম মেসেজ এবং কালার ডিসপ্লে করা
+                    if deliverability == "DELIVERABLE":
+                        st.markdown("<p style='color: #22c55e; font-size: 24px; font-weight: bold;'>amar pawa na taka ferot de, manger nati</p>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<p style='color: #ef4444; font-size: 24px; font-weight: bold;'>email putki diya dimu</p>", unsafe_allow_html=True)
+
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Status", deliverability)
                     col2.metric("Quality Score", result.get("quality_score"))
                     col3.metric("Is Disposable?", str(result.get("is_disposable_email", {}).get("value")))
                     
