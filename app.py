@@ -5,7 +5,7 @@ import pandas as pd
 # পেজ লেআউট কনফিগারেশন
 st.set_page_config(page_title="NeverBounce Clone - Inferno Edition", layout="wide")
 
-# --- কাস্টম ফায়ার থেম এবং ফুল-স্ক্রিন রানিং ফায়ার অ্যানিমেশন CSS ---
+# --- কাস্টম ফায়ার থেম সিএসএস (Separate Block) ---
 st.markdown("""
 <style>
     /* পুরো ওয়েবপেজের ফায়ার ব্যাকগ্রাউন্ড এবং অ্যানিমেশন */
@@ -66,8 +66,10 @@ st.markdown("""
         color: #ffedd5 !important;
     }
 </style>
+""", unsafe_allow_html=True)
 
-<!-- ফুল স্ক্রিন রানিং এবং অ্যাস ফায়ারিং অ্যানিমেশন -->
+# --- রানিং এবং অ্যাস ফায়ারিং অ্যানিমেশন এইচটিএমএল (Separate Block) ---
+st.markdown("""
 <div class="fire-runner-track">
     <div class="running-human-container">
         <svg width="160" height="90" viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -84,4 +86,58 @@ st.markdown("""
             <path d="M95 18 Q105 10 115 18" stroke="#ff4500" stroke-width="4" stroke-linecap="round"/>
             <path d="M105 33 L98 58 L85 75" stroke="#ffe4c4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M100 42 L120 48 L130 40" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M100 42 L80 50 L70 42" stroke
+            <path d="M100 42 L80 50 L70 42" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M98 58 L110 78 L125 75" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M98 58 L80 72 L65 78" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Streamlit Secrets থেকে এপিআই কি লোড করা
+try:
+    API_KEY = st.secrets["ABSTRACT_API_KEY"]
+except Exception as e:
+    st.error("API Key not found in Streamlit Secrets! Please check your secrets.toml configuration.")
+    st.stop()
+
+# সিঙ্গেল ইমেইল চেক করার ফাংশন
+def verify_single_email(email):
+    url = f"https://emailvalidation.abstractapi.com/v1/?api_key={API_KEY}&email={email}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+    return None
+
+# অ্যাপ টাইটেল এবং হেডার
+st.title("Inferno Email Verification Engine")
+st.markdown("### High-Performance Bulk & Single Email Validation System")
+
+# ট্যাব তৈরি (Single এবং Bulk এর জন্য)
+tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
+
+# --- TAB 1: Single Email ---
+with tab1:
+    st.header("Check Single Email")
+    email_input = st.text_input("Enter email address for verification:")
+    
+    if st.button("Verify Email"):
+        if email_input:
+            with st.spinner("Executing high-speed verification..."):
+                result = verify_single_email(email_input)
+                
+                if result and "error" not in result:
+                    st.success("Verification Complete")
+                    col1, col2, col3 = st.columns(3)
+                    
+                    col1.metric("Status", result.get("deliverability"))
+                    col2.metric("Quality Score", result.get("quality_score"))
+                    col3.metric("Is Disposable?", str(result.get("is_disposable_email", {}).get("value")))
+                    
+                    with st.expander("See Full JSON Response"):
+                        st.json(result)
+                else:
+                    st.error("Failed to verify. Please check the email
