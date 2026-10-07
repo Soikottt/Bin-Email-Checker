@@ -67,7 +67,7 @@ st.markdown("""
     }
 </style>
 
-<!-- ফুল স্ক্রিন রানিং এবং অ্যাস ফায়ারিং অ্যানিমেশন (নো ইমোজি) -->
+<!-- ফুল স্ক্রিন রানিং এবং অ্যাস ফায়ারিং অ্যানিমেশন -->
 <div class="fire-runner-track">
     <div class="running-human-container">
         <svg width="160" height="90" viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -79,50 +79,9 @@ st.markdown("""
                 <animate attributeName="d" values="M40 55 L-10 45 L40 35 Z; M40 60 L-30 45 L40 30 Z; M40 55 L-10 45 L40 35 Z" dur="0.15s" repeatCount="indefinite"/>
             </path>
             
-            <!-- ফুল হিউম্যান বডি স্ট্রাকচার (মাথা, ধড়, হাত, পা) -->
-            <!-- মাথা -->
+            <!-- ফুল হিউম্যান বডি স্ট্রাকচার -->
             <circle cx="105" cy="22" r="11" fill="#ffe4c4"/>
-            <!-- হেলমেট বা চুল -->
             <path d="M95 18 Q105 10 115 18" stroke="#ff4500" stroke-width="4" stroke-linecap="round"/>
-            <!-- বডি / ধড় -->
             <path d="M105 33 L98 58 L85 75" stroke="#ffe4c4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- হাত (ডান ও বাম হাত দৌড়ানোর ভঙ্গিতে) -->
             <path d="M100 42 L120 48 L130 40" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M100 42 L80 50 L70 42" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- পা (দৌড়ানোর অ্যানিমেটেড পজিশন) -->
-            <path d="M98 58 L110 78 L125 75" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M98 58 L80 72 L65 78" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Streamlit Secrets থেকে এপিআই কি লোড করা
-try:
-    API_KEY = st.secrets["ABSTRACT_API_KEY"]
-except Exception as e:
-    st.error("API Key not found in Streamlit Secrets! Please check your secrets.toml configuration.")
-    st.stop()
-
-# সিঙ্গেল ইমেইল চেক করার ফাংশন
-def verify_single_email(email):
-    url = f"https://emailvalidation.abstractapi.com/v1/?api_key={API_KEY}&email={email}"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        return {"error": str(e)}
-    return None
-
-# অ্যাপ টাইটেল এবং হেডার
-st.title("Inferno Email Verification Engine")
-st.markdown("### High-Performance Bulk & Single Email Validation System")
-
-# ট্যাব তৈরি (Single এবং Bulk এর জন্য)
-tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
-
-# --- TAB 1: Single Email ---
-with tab1:
-    st.header("Check Single Email")
-    email_input = st.text_input("Enter email address for
+            <path d="M100 42 L80 50 L70 42" stroke
