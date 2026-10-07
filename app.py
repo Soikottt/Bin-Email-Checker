@@ -39,81 +39,64 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Streamlit Secrets থেকে দুটি এপিআই কি লোড করা
+# Streamlit Secrets থেকে দুটি Abstract API Key লোড করা
 try:
-    ABSTRACT_API_KEY = st.secrets["ABSTRACT_API_KEY"]
+    key_1 = st.secrets["ABSTRACT_API_KEY_1"]
 except Exception:
-    ABSTRACT_API_KEY = None
+    key_1 = None
 
 try:
-    HUNTER_API_KEY = st.secrets["HUNTER_API_KEY"]
+    key_2 = st.secrets["ABSTRACT_API_KEY_2"]
 except Exception:
-    HUNTER_API_KEY = None
+    key_2 = None
 
-if not ABSTRACT_API_KEY and not HUNTER_API_KEY:
-    st.error("Please configure at least one API key (ABSTRACT_API_KEY or HUNTER_API_KEY) in Streamlit Secrets!")
+# যদি আলাদাভাবে দুটি না থাকে, তবে আগের সিঙ্গেল কি দিয়ে ফলব্যাক করার ব্যবস্থা
+if not key_1 and not key_2:
+    try:
+        key_1 = st.secrets["ABSTRACT_API_KEY"]
+    except Exception:
+        pass
+
+# এভেইলেবল কিগুলোর লিস্ট তৈরি করা
+active_keys = []
+if key_1: active_keys.append(("Abstract API (Key 1)", key_1))
+if key_2: active_keys.append(("Abstract API (Key 2)", key_2))
+
+if not active_keys:
+    st.error("Please configure at least one Abstract API key (ABSTRACT_API_KEY_1 or ABSTRACT_API_KEY_2) in Streamlit Secrets!")
     st.stop()
 
 # রাউন্ড-রবিন কাউন্টার ইনিশিয়ালাইজ করা
 if 'api_counter' not in st.session_state:
     st.session_state.api_counter = 0
 
-# --- Round-Robin API Verification Function ---
-def verify_with_round_robin(email):
-    # কোন এপিআই ব্যবহার হবে তা নির্ধারণ (বিকল্প পদ্ধতিতে সুইচ করা)
-    available_apis = []
-    if ABSTRACT_API_KEY: available_apis.append("ABSTRACT")
-    if HUNTER_API_KEY: available_apis.append("HUNTER")
-    
-    if not available_apis:
-        return {"error": "No API keys available."}
-    
-    # রাউন্ড-রবিন লজিক
-    current_api_type = available_apis[st.session_state.api_counter % len(available_apis)]
+# --- Round-Robin Verification Function for Abstract API ---
+def verify_with_abstract_round_robin(email):
+    # রাউন্ড-রবিন লজিক অনুযায়ী কি সিলেক্ট করা
+    api_name, current_key = active_keys[st.session_state.api_counter % len(active_keys)]
     st.session_state.api_counter += 1
     
-    if current_api_type == "ABSTRACT":
-        url = f"https://emailreputation.abstractapi.com/v1/?api_key={ABSTRACT_API_KEY}&email={email}"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                d_dict = data.get("email_deliverability", {})
-                status = d_dict.get("status", "UNKNOWN").upper() if isinstance(d_dict, dict) else "UNKNOWN"
-                return {
-                    "api_used": "Abstract API",
-                    "deliverability": status,
-                    "quality_score": data.get("quality_score", "N/A"),
-                    "raw": data
-                }
-            else:
-                return {"api_used": "Abstract API", "error": f"Status {response.status_code}: {response.text}"}
-        except Exception as e:
-            return {"api_used": "Abstract API", "error": str(e)}
-            
-    else: # HUNTER API
-        url = f"https://api.hunter.io/v2/email-verifier?email={email}&api_key={HUNTER_API_KEY}"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json().get("data", {})
-                status = data.get("result", "unknown").upper() # deliverable, undeliverable etc.
-                # Hunter স্ট্যাটাসকে স্ট্যান্ডার্ড ফরম্যাটে রূপান্তর
-                deliverability = "DELIVERABLE" if status == "DELIVERABLE" else status
-                return {
-                    "api_used": "Hunter.io API",
-                    "deliverability": deliverability,
-                    "quality_score": data.get("score", "N/A"),
-                    "raw": data
-                }
-            else:
-                return {"api_used": "Hunter.io API", "error": f"Status {response.status_code}: {response.text}"}
-        except Exception as e:
-            return {"api_used": "Hunter.io API", "error": str(e)}
+    url = f"https://emailreputation.abstractapi.com/v1/?api_key={current_key}&email={email}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            d_dict = data.get("email_deliverability", {})
+            status = d_dict.get("status", "UNKNOWN").upper() if isinstance(d_dict, dict) else "UNKNOWN"
+            return {
+                "api_used": api_name,
+                "deliverability": status,
+                "quality_score": data.get("quality_score", "N/A"),
+                "raw": data
+            }
+        else:
+            return {"api_used": api_name, "error": f"Status {response.status_code}: {response.text}"}
+    except Exception as e:
+        return {"api_used": api_name, "error": str(e)}
 
 # অ্যাপ টাইটেল এবং হেডার
-st.title("🔥 ভইরা দিলাম, কইরা খা! (Round-Robin Engine)")
-st.markdown("### Multi-API High-Performance Bulk & Single Email Validation System")
+st.title("🔥 ভইরা দিলাম, কইরা খা! (Dual Abstract API Round-Robin)")
+st.markdown("### High-Performance Bulk & Single Email Validation System")
 
 tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
 
@@ -124,8 +107,8 @@ with tab1:
     
     if st.button("Verify Email"):
         if email_input:
-            with st.spinner("Executing round-robin high-speed verification..."):
-                result = verify_with_round_robin(email_input)
+            with st.spinner("Executing dual-key round-robin verification..."):
+                result = verify_with_abstract_round_robin(email_input)
                 
                 if result and "error" not in result:
                     deliverability = result.get("deliverability")
@@ -142,7 +125,7 @@ with tab1:
                     col1, col2, col3 = st.columns(3)
                     col1.metric("Status", deliverability)
                     col2.metric("Quality Score", str(result.get("quality_score", "N/A")))
-                    col3.metric("API Used", api_used)
+                    col3.metric("Key Used", api_used)
                     
                     with st.expander("See Full JSON Response"):
                         st.json(result.get("raw"))
@@ -176,7 +159,7 @@ with tab2:
                     email = row['email']
                     status_text.text(f"Processing ({index+1}/{total_emails}): {email}")
                     
-                    res = verify_with_round_robin(email)
+                    res = verify_with_abstract_round_robin(email)
                     if res and "error" not in res:
                         results.append({
                             "email": email,
@@ -207,7 +190,7 @@ with tab2:
                 st.download_button(
                     label="Download Full Results as CSV",
                     data=csv_data,
-                    file_name='verified_emails_round_robin.csv',
+                    file_name='verified_emails_abstract_rr.csv',
                     mime='text/csv',
                 )
         else:
