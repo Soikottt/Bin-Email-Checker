@@ -2,6 +2,63 @@ import streamlit as st
 import requests
 import pandas as pd
 
+# পেজ লেআউট কনফিগারেশন
+st.set_page_config(page_title="NeverBounce Clone - Fun Edition", layout="wide")
+
+# --- কাস্টম CSS এবং অ্যানিমেশন (Human Running & Firing Theme) ---
+st.markdown("""
+<style>
+    /* মেইন ব্যাকগ্রাউন্ড এবং ফন্ট স্টাইল */
+    .stApp {
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+    
+    /* রানিং অ্যানিমেশন কন্টেইনার */
+    .running-container {
+        position: relative;
+        width: 100%;
+        height: 50px;
+        overflow: hidden;
+        background: linear-zgradient(90deg, #1e293b, #334155);
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* দৌড়ানোর অ্যানিমেটেড ক্যারেক্টার */
+    .runner-man {
+        position: absolute;
+        font-size: 28px;
+        white-space: nowrap;
+        animation: runAcross 8s linear infinite;
+    }
+
+    @keyframes runAcross {
+        0% {
+            left: -5%;
+            transform: scaleX(1);
+        }
+        50% {
+            transform: scaleX(1);
+        }
+        50.1% {
+            transform: scaleX(-1); /* ঘুরে দাঁড়ানোর ইফেক্ট */
+        }
+        100% {
+            left: 95%;
+            transform: scaleX(-1);
+        }
+    }
+</style>
+
+<!-- অ্যানিমেশন ব্যানার -->
+<div class="running-container">
+    <div class="runner-man">🏃‍♂️💨🔥 [SYSTEM RUNNING & FIRING ENGINE ACTIVE]</div>
+</div>
+""", unsafe_allow_html=True)
+
 # Streamlit Secrets থেকে এপিআই কি লোড করা
 try:
     API_KEY = st.secrets["ABSTRACT_API_KEY"]
@@ -20,10 +77,9 @@ def verify_single_email(email):
         return {"error": str(e)}
     return None
 
-# পেজ লেআউট কনফিগারেশন
-st.set_page_config(page_title="NeverBounce Clone - Secure", layout="wide")
+# অ্যাপ টাইটেল
 st.title("🛡️ Secure Email Verifier (NeverBounce Clone)")
-st.markdown("Powered by Python, Abstract API & Streamlit Secrets")
+st.markdown("### 🔥 High-Speed Email Verification & Firing Engine")
 
 # ট্যাব তৈরি (Single এবং Bulk এর জন্য)
 tab1, tab2 = st.tabs(["🔍 Single Email Verification", "📂 Bulk CSV Verification"])
@@ -35,7 +91,7 @@ with tab1:
     
     if st.button("Verify Email"):
         if email_input:
-            with st.spinner("Verifying email..."):
+            with st.spinner("Firing verification request... 🏃‍♂️"):
                 result = verify_single_email(email_input)
                 
                 if result and "error" not in result:
@@ -68,7 +124,7 @@ with tab2:
             st.info(f"Total emails found in file: {len(df)}")
             st.dataframe(df.head())
             
-            if st.button("Start Bulk Verification"):
+            if st.button("Start Bulk Firing Verification"):
                 results = []
                 progress_bar = st.progress(0)
                 status_text = st.empty()
@@ -76,7 +132,7 @@ with tab2:
                 total_emails = len(df)
                 for index, row in df.iterrows():
                     email = row['email']
-                    status_text.text(f"Processing ({index+1}/{total_emails}): {email}")
+                    status_text.text(f"Firing query ({index+1}/{total_emails}): {email}")
                     
                     # এপিআই কল
                     res = verify_single_email(email)
@@ -100,13 +156,13 @@ with tab2:
                     # প্রোগ্রেস বার আপডেট
                     progress_bar.progress((index + 1) / total_emails)
                 
-                status_text.text("Bulk verification finished successfully!")
+                status_text.text("Bulk verification finished successfully! 🔥")
                 result_df = pd.DataFrame(results)
                 
                 st.subheader("Verification Results:")
                 st.dataframe(result_df)
                 
-                # ফিল্টার করে শুধু ভ্যালিড মেইলগুলো আলাদা ডাউনলোড করার অপশন
+                # ডাউনলোড অপশন
                 valid_df = result_df[result_df['deliverability'] == 'DELIVERABLE']
                 st.write(f"Total Valid (Deliverable) Emails: {len(valid_df)}")
                 
@@ -114,7 +170,7 @@ with tab2:
                 st.download_button(
                     label="📥 Download Full Results as CSV",
                     data=csv_data,
-                    file_name='verified_emails_full.csv',
+                    file_name='verified_emails_full.css',
                     mime='text/csv',
                 )
         else:
