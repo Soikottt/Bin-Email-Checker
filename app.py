@@ -5,85 +5,18 @@ import pandas as pd
 # পেজ লেআউট কনফিগারেশন
 st.set_page_config(page_title="Inferno Email Verification Engine", layout="wide")
 
-# --- অপ্টিমাইজড ফায়ার থেম সিএসএস ---
+# --- সহজ এবং পরিষ্কার স্টাইল (যাতে কোনো কন্টেন্ট লুকায়ে না যায়) ---
 st.markdown("""
 <style>
     .stApp {
-        background: linear-gradient(135deg, #180202 0%, #3a0a00 35%, #7c1100 70%, #b91c1c 100%);
-        background-size: 400% 400%;
-        animation: fireBackgroundGlow 8s ease infinite;
-        color: #ffedd5;
+        background-color: #0f172a;
+        color: #f8fafc;
     }
-
-    @keyframes fireBackgroundGlow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    .fire-runner-track {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100vw;
-        height: 120px;
-        pointer-events: none;
-        z-index: 99999;
-        overflow: hidden;
-    }
-
-    .running-human-container {
-        position: absolute;
-        bottom: 10px;
-        animation: runAcrossFullPage 6s linear infinite;
-    }
-
-    @keyframes runAcrossFullPage {
-        0% {
-            left: -180px;
-            transform: scaleX(1);
-        }
-        100% {
-            left: 100vw;
-            transform: scaleX(1);
-        }
-    }
-
-    div[data-testid="stVerticalBlock"] > div {
-        background-color: rgba(43, 9, 2, 0.85);
-        border: 1px solid rgba(255, 69, 0, 0.4);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    }
-
-    h1, h2, h3, h4, h5, h6, p, label {
-        color: #ffedd5 !important;
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
     }
 </style>
-""", unsafe_allow_html=True)
-
-# --- অ্যানিমেশন এইচটিএমএল ---
-st.markdown("""
-<div class="fire-runner-track">
-    <div class="running-human-container">
-        <svg width="160" height="90" viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M35 52 L5 45 L35 38 L20 45 Z" fill="#ff4500">
-                <animate attributeName="d" values="M35 52 L-5 45 L35 38 L15 45 Z; M35 56 L-25 45 L35 34 L-5 45 Z; M35 52 L-5 45 L35 38 L15 45 Z" dur="0.15s" repeatCount="indefinite"/>
-            </path>
-            <path d="M40 55 L-10 45 L40 35 Z" fill="#ffcc00" opacity="0.9">
-                <animate attributeName="d" values="M40 55 L-10 45 L40 35 Z; M40 60 L-30 45 L40 30 Z; M40 55 L-10 45 L40 35 Z" dur="0.15s" repeatCount="indefinite"/>
-            </path>
-            <circle cx="105" cy="22" r="11" fill="#ffe4c4"/>
-            <path d="M95 18 Q105 10 115 18" stroke="#ff4500" stroke-width="4" stroke-linecap="round"/>
-            <path d="M105 33 L98 58 L85 75" stroke="#ffe4c4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M100 42 L120 48 L130 40" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M100 42 L80 50 L70 42" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M98 58 L110 78 L125 75" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M98 58 L80 72 L65 78" stroke="#ffe4c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </div>
-</div>
 """, unsafe_allow_html=True)
 
 # Streamlit Secrets থেকে এপিআই কি লোড করা
@@ -104,4 +37,97 @@ def verify_single_email(email):
         return {"error": str(e)}
     return None
 
-#
+# অ্যাপ টাইটেল এবং হেডার
+st.title("🔥 Inferno Email Verification Engine")
+st.markdown("### High-Performance Bulk & Single Email Validation System")
+
+# ট্যাব তৈরি (Single এবং Bulk এর জন্য)
+tab1, tab2 = st.tabs(["🔍 Single Email Verification", "📂 Bulk CSV Verification"])
+
+# --- TAB 1: Single Email ---
+with tab1:
+    st.header("Check Single Email")
+    email_input = st.text_input("Enter email address for verification:")
+    
+    if st.button("Verify Email"):
+        if email_input:
+            with st.spinner("Executing high-speed verification..."):
+                result = verify_single_email(email_input)
+                
+                if result and "error" not in result:
+                    st.success("Verification Complete")
+                    col1, col2, col3 = st.columns(3)
+                    
+                    col1.metric("Status", result.get("deliverability"))
+                    col2.metric("Quality Score", result.get("quality_score"))
+                    col3.metric("Is Disposable?", str(result.get("is_disposable_email", {}).get("value")))
+                    
+                    with st.expander("See Full JSON Response"):
+                        st.json(result)
+                else:
+                    st.error("Failed to verify. Please check the email or API limits.")
+        else:
+            st.warning("Please enter an email address first.")
+
+# --- TAB 2: Bulk Email (CSV) ---
+with tab2:
+    st.header("Bulk Email Verification (CSV Upload)")
+    st.markdown("Upload a CSV file that contains a column named **'email'**.")
+    
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        
+        if 'email' in df.columns:
+            st.info(f"Total emails found in file: {len(df)}")
+            st.dataframe(df.head())
+            
+            if st.button("Start Bulk Verification"):
+                results = []
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                total_emails = len(df)
+                for index, row in df.iterrows():
+                    email = row['email']
+                    status_text.text(f"Processing ({index+1}/{total_emails}): {email}")
+                    
+                    res = verify_single_email(email)
+                    if res and "error" not in res:
+                        results.append({
+                            "email": email,
+                            "deliverability": res.get("deliverability"),
+                            "quality_score": res.get("quality_score"),
+                            "is_valid_format": res.get("is_valid_format", {}).get("value"),
+                            "is_disposable": res.get("is_disposable_email", {}).get("value")
+                        })
+                    else:
+                        results.append({
+                            "email": email,
+                            "deliverability": "ERROR",
+                            "quality_score": 0,
+                            "is_valid_format": False,
+                            "is_disposable": False
+                        })
+                    
+                    progress_bar.progress((index + 1) / total_emails)
+                
+                status_text.text("Bulk verification finished successfully")
+                result_df = pd.DataFrame(results)
+                
+                st.subheader("Verification Results:")
+                st.dataframe(result_df)
+                
+                valid_df = result_df[result_df['deliverability'] == 'DELIVERABLE']
+                st.write(f"Total Valid (Deliverable) Emails: {len(valid_df)}")
+                
+                csv_data = result_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Download Full Results as CSV",
+                    data=csv_data,
+                    file_name='verified_emails_full.csv',
+                    mime='text/csv',
+                )
+        else:
+            st.error("Error: Your CSV file must contain a column named exactly **'email'**.")
