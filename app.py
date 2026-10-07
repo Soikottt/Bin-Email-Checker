@@ -48,16 +48,17 @@ except Exception as e:
     st.error("API Key not found in Streamlit Secrets! Please check your secrets.toml configuration.")
     st.stop()
 
-# সিঙ্গেল ইমেইল চেক করার ফাংশন
+# সিঙ্গেল ইমেইল চেক করার ফাংশন (ডিবাগিং সহ)
 def verify_single_email(email):
     url = f"https://emailvalidation.abstractapi.com/v1/?api_key={API_KEY}&email={email}"
     try:
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()
+        else:
+            return {"error": f"API Status {response.status_code}: {response.text}"}
     except Exception as e:
         return {"error": str(e)}
-    return None
 
 # অ্যাপ টাইটেল এবং হেডার
 st.title("🔥 ভইরা দিলাম, কইরা খা!")
@@ -93,7 +94,8 @@ with tab1:
                     with st.expander("See Full JSON Response"):
                         st.json(result)
                 else:
-                    st.error("Failed to verify. Please check the email or API limits.")
+                    error_msg = result.get("error") if result else "Unknown error"
+                    st.error(f"Failed to verify. Details: {error_msg}")
         else:
             st.warning("Please enter an email address first.")
 
