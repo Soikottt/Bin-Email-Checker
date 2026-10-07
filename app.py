@@ -60,7 +60,7 @@ def verify_single_email(email):
     return None
 
 # অ্যাপ টাইটেল এবং হেডার
-st.title("🔥 Inferno & 🧊 Ice Email Verification Engine")
+st.title("🔥 ভইরা দিলাম, কইরা খা!")
 st.markdown("### High-Performance Bulk & Single Email Validation System")
 
 # ট্যাব তৈরি (Single এবং Bulk এর জন্য)
