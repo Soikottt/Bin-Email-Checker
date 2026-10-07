@@ -39,28 +39,81 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Streamlit Secrets থেকে এপিআই কি লোড করা
+# Streamlit Secrets থেকে দুটি এপিআই কি লোড করা
 try:
-    API_KEY = st.secrets["ABSTRACT_API_KEY"]
-except Exception as e:
-    st.error("API Key not found in Streamlit Secrets! Please check your secrets.toml configuration.")
+    ABSTRACT_API_KEY = st.secrets["ABSTRACT_API_KEY"]
+except Exception:
+    ABSTRACT_API_KEY = None
+
+try:
+    HUNTER_API_KEY = st.secrets["HUNTER_API_KEY"]
+except Exception:
+    HUNTER_API_KEY = None
+
+if not ABSTRACT_API_KEY and not HUNTER_API_KEY:
+    st.error("Please configure at least one API key (ABSTRACT_API_KEY or HUNTER_API_KEY) in Streamlit Secrets!")
     st.stop()
 
-# সিঙ্গেল ইমেইল চেক করার ফাংশন (Email Reputation Endpoint)
-def verify_single_email(email):
-    url = f"https://emailreputation.abstractapi.com/v1/?api_key={API_KEY}&email={email}"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {"error": f"API Status {response.status_code}: {response.text}"}
-    except Exception as e:
-        return {"error": str(e)}
+# রাউন্ড-রবিন কাউন্টার ইনিশিয়ালাইজ করা
+if 'api_counter' not in st.session_state:
+    st.session_state.api_counter = 0
+
+# --- Round-Robin API Verification Function ---
+def verify_with_round_robin(email):
+    # কোন এপিআই ব্যবহার হবে তা নির্ধারণ (বিকল্প পদ্ধতিতে সুইচ করা)
+    available_apis = []
+    if ABSTRACT_API_KEY: available_apis.append("ABSTRACT")
+    if HUNTER_API_KEY: available_apis.append("HUNTER")
+    
+    if not available_apis:
+        return {"error": "No API keys available."}
+    
+    # রাউন্ড-রবিন লজিক
+    current_api_type = available_apis[st.session_state.api_counter % len(available_apis)]
+    st.session_state.api_counter += 1
+    
+    if current_api_type == "ABSTRACT":
+        url = f"https://emailreputation.abstractapi.com/v1/?api_key={ABSTRACT_API_KEY}&email={email}"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                d_dict = data.get("email_deliverability", {})
+                status = d_dict.get("status", "UNKNOWN").upper() if isinstance(d_dict, dict) else "UNKNOWN"
+                return {
+                    "api_used": "Abstract API",
+                    "deliverability": status,
+                    "quality_score": data.get("quality_score", "N/A"),
+                    "raw": data
+                }
+            else:
+                return {"api_used": "Abstract API", "error": f"Status {response.status_code}: {response.text}"}
+        except Exception as e:
+            return {"api_used": "Abstract API", "error": str(e)}
+            
+    else: # HUNTER API
+        url = f"https://api.hunter.io/v2/email-verifier?email={email}&api_key={HUNTER_API_KEY}"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json().get("data", {})
+                status = data.get("result", "unknown").upper() # deliverable, undeliverable etc.
+                # Hunter স্ট্যাটাসকে স্ট্যান্ডার্ড ফরম্যাটে রূপান্তর
+                deliverability = "DELIVERABLE" if status == "DELIVERABLE" else status
+                return {
+                    "api_used": "Hunter.io API",
+                    "deliverability": deliverability,
+                    "quality_score": data.get("score", "N/A"),
+                    "raw": data
+                }
+            else:
+                return {"api_used": "Hunter.io API", "error": f"Status {response.status_code}: {response.text}"}
+        except Exception as e:
+            return {"api_used": "Hunter.io API", "error": str(e)}
 
 # অ্যাপ টাইটেল এবং হেডার
-st.title("🔥 ভইরা দিলাম, কইরা খা!")
-st.markdown("### High-Performance Bulk & Single Email Validation System")
+st.title("🔥 ভইরা দিলাম, কইরা খা! (Round-Robin Engine)")
+st.markdown("### Multi-API High-Performance Bulk & Single Email Validation System")
 
 tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
 
@@ -71,33 +124,31 @@ with tab1:
     
     if st.button("Verify Email"):
         if email_input:
-            with st.spinner("Executing high-speed verification..."):
-                result = verify_single_email(email_input)
+            with st.spinner("Executing round-robin high-speed verification..."):
+                result = verify_with_round_robin(email_input)
                 
                 if result and "error" not in result:
-                    # Email Reputation এর সঠিক স্ট্রাকচার থেকে status বের করা
-                    deliverability_dict = result.get("email_deliverability", {})
-                    deliverability = deliverability_dict.get("status", "unknown").upper() if isinstance(deliverability_dict, dict) else "UNKNOWN"
+                    deliverability = result.get("deliverability")
+                    api_used = result.get("api_used")
+                    
+                    st.info(f"⚡ Routed via: **{api_used}**")
                     
                     # শর্ত অনুযায়ী কাস্টম মেসেজ এবং কালার ডিসপ্লে করা
                     if deliverability == "DELIVERABLE":
-                        st.markdown("<p style='color: #22c55e; font-size: 24px; font-weight: bold;'>amar pawa na taka ferot de, manger nati</p>", unsafe_allow_html=True)
+                        st.markdown("<p style='color: #22c55e; font-size: 24px; font-weight: bold;'>amar pawna taka ferot de, manger nati</p>", unsafe_allow_html=True)
                     else:
                         st.markdown("<p style='color: #ef4444; font-size: 24px; font-weight: bold;'>email putki diya dimu</p>", unsafe_allow_html=True)
 
                     col1, col2, col3 = st.columns(3)
                     col1.metric("Status", deliverability)
-                    col2.metric("Quality Score", result.get("quality_score", "N/A"))
-                    
-                    is_disp_dict = result.get("is_disposable_email", {})
-                    is_disp = is_disp_dict.get("value") if isinstance(is_disp_dict, dict) else "N/A"
-                    col3.metric("Is Disposable?", str(is_disp))
+                    col2.metric("Quality Score", str(result.get("quality_score", "N/A")))
+                    col3.metric("API Used", api_used)
                     
                     with st.expander("See Full JSON Response"):
-                        st.json(result)
+                        st.json(result.get("raw"))
                 else:
                     error_msg = result.get("error") if result else "Unknown error"
-                    st.error(f"Failed to verify. Details: {error_msg}")
+                    st.error(f"Failed to verify via {result.get('api_used', 'API')}. Details: {error_msg}")
         else:
             st.warning("Please enter an email address first.")
 
@@ -125,36 +176,25 @@ with tab2:
                     email = row['email']
                     status_text.text(f"Processing ({index+1}/{total_emails}): {email}")
                     
-                    res = verify_single_email(email)
+                    res = verify_with_round_robin(email)
                     if res and "error" not in res:
-                        d_dict = res.get("email_deliverability", {})
-                        d_status = d_dict.get("status", "UNKNOWN").upper() if isinstance(d_dict, dict) else "UNKNOWN"
-                        
-                        is_valid_fmt = res.get("is_valid_format", {})
-                        fmt_val = is_valid_fmt.get("value") if isinstance(is_valid_fmt, dict) else False
-                        
-                        is_disp = res.get("is_disposable_email", {})
-                        disp_val = is_disp.get("value") if isinstance(is_disp, dict) else False
-
                         results.append({
                             "email": email,
-                            "deliverability": d_status,
+                            "deliverability": res.get("deliverability"),
                             "quality_score": res.get("quality_score", 0),
-                            "is_valid_format": fmt_val,
-                            "is_disposable": disp_val
+                            "api_used": res.get("api_used")
                         })
                     else:
                         results.append({
                             "email": email,
                             "deliverability": "ERROR",
                             "quality_score": 0,
-                            "is_valid_format": False,
-                            "is_disposable": False
+                            "api_used": res.get("api_used", "UNKNOWN")
                         })
                     
                     progress_bar.progress((index + 1) / total_emails)
                 
-                status_text.text("Bulk verification finished successfully")
+                status_text.text("Bulk round-robin verification finished successfully!")
                 result_df = pd.DataFrame(results)
                 
                 st.subheader("Verification Results:")
@@ -167,7 +207,7 @@ with tab2:
                 st.download_button(
                     label="Download Full Results as CSV",
                     data=csv_data,
-                    file_name='verified_emails_full.csv',
+                    file_name='verified_emails_round_robin.csv',
                     mime='text/csv',
                 )
         else:
