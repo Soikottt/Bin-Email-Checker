@@ -8,7 +8,6 @@ st.set_page_config(page_title="ভইরা দিলাম, কইরা খা
 # --- ফায়ার ব্যাকগ্রাউন্ড এবং আইস কোল্ড ইনপুট বক্সের জন্য CSS ---
 st.markdown("""
 <style>
-    /* পুরো ওয়েবপেজের ফায়ার ব্যাকগ্রাউন্ড (লাল, কমলা ও হলুদ শেড) */
     .stApp {
         background: linear-gradient(135deg, #2a0800 0%, #6b1100 40%, #b91c1c 80%, #ea580c 100%);
         background-size: 400% 400%;
@@ -22,7 +21,6 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* সার্চ বক্স / টেক্সট ইনপুট ফিল্ডের আইস কোল্ড থিম */
     div.stTextInput > div.st-bx > div, div.stTextInput input {
         background-color: #e0f2fe !important;
         color: #0369a1 !important;
@@ -48,7 +46,7 @@ except Exception as e:
     st.error("API Key not found in Streamlit Secrets! Please check your secrets.toml configuration.")
     st.stop()
 
-# সিঙ্গেল ইমেইল চেক করার ফাংশন (Email Reputation Endpoint সহ আপডেট করা)
+# সিঙ্গেল ইমেইল চেক করার ফাংশন (Email Reputation Endpoint)
 def verify_single_email(email):
     url = f"https://emailreputation.abstractapi.com/v1/?api_key={API_KEY}&email={email}"
     try:
@@ -64,7 +62,6 @@ def verify_single_email(email):
 st.title("🔥 ভইরা দিলাম, কইরা খা!")
 st.markdown("### High-Performance Bulk & Single Email Validation System")
 
-# ট্যাব তৈরি (Single এবং Bulk এর জন্য)
 tab1, tab2 = st.tabs(["Single Email Verification", "Bulk CSV Verification"])
 
 # --- TAB 1: Single Email ---
@@ -78,7 +75,9 @@ with tab1:
                 result = verify_single_email(email_input)
                 
                 if result and "error" not in result:
-                    deliverability = result.get("deliverability")
+                    # Email Reputation এর সঠিক স্ট্রাকচার থেকে status বের করা
+                    deliverability_dict = result.get("email_deliverability", {})
+                    deliverability = deliverability_dict.get("status", "unknown").upper() if isinstance(deliverability_dict, dict) else "UNKNOWN"
                     
                     # শর্ত অনুযায়ী কাস্টম মেসেজ এবং কালার ডিসপ্লে করা
                     if deliverability == "DELIVERABLE":
@@ -88,8 +87,11 @@ with tab1:
 
                     col1, col2, col3 = st.columns(3)
                     col1.metric("Status", deliverability)
-                    col2.metric("Quality Score", result.get("quality_score"))
-                    col3.metric("Is Disposable?", str(result.get("is_disposable_email", {}).get("value")))
+                    col2.metric("Quality Score", result.get("quality_score", "N/A"))
+                    
+                    is_disp_dict = result.get("is_disposable_email", {})
+                    is_disp = is_disp_dict.get("value") if isinstance(is_disp_dict, dict) else "N/A"
+                    col3.metric("Is Disposable?", str(is_disp))
                     
                     with st.expander("See Full JSON Response"):
                         st.json(result)
@@ -115,4 +117,58 @@ with tab2:
             
             if st.button("Start Bulk Verification"):
                 results = []
-                progress_bar = st
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                total_emails = len(df)
+                for index, row in df.iterrows():
+                    email = row['email']
+                    status_text.text(f"Processing ({index+1}/{total_emails}): {email}")
+                    
+                    res = verify_single_email(email)
+                    if res and "error" not in res:
+                        d_dict = res.get("email_deliverability", {})
+                        d_status = d_dict.get("status", "UNKNOWN").upper() if isinstance(d_dict, dict) else "UNKNOWN"
+                        
+                        is_valid_fmt = res.get("is_valid_format", {})
+                        fmt_val = is_valid_fmt.get("value") if isinstance(is_valid_fmt, dict) else False
+                        
+                        is_disp = res.get("is_disposable_email", {})
+                        disp_val = is_disp.get("value") if isinstance(is_disp, dict) else False
+
+                        results.append({
+                            "email": email,
+                            "deliverability": d_status,
+                            "quality_score": res.get("quality_score", 0),
+                            "is_valid_format": fmt_val,
+                            "is_disposable": disp_val
+                        })
+                    else:
+                        results.append({
+                            "email": email,
+                            "deliverability": "ERROR",
+                            "quality_score": 0,
+                            "is_valid_format": False,
+                            "is_disposable": False
+                        })
+                    
+                    progress_bar.progress((index + 1) / total_emails)
+                
+                status_text.text("Bulk verification finished successfully")
+                result_df = pd.DataFrame(results)
+                
+                st.subheader("Verification Results:")
+                st.dataframe(result_df)
+                
+                valid_df = result_df[result_df['deliverability'] == 'DELIVERABLE']
+                st.write(f"Total Valid (Deliverable) Emails: {len(valid_df)}")
+                
+                csv_data = result_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Download Full Results as CSV",
+                    data=csv_data,
+                    file_name='verified_emails_full.csv',
+                    mime='text/csv',
+                )
+        else:
+            st.error("Error: Your CSV file must contain a column named exactly **'email'**.")
